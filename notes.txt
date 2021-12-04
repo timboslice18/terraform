@@ -1,0 +1,368 @@
+Terraform Notes
+ 
+https://learn.hashicorp.com/terraform/getting-started/install.html
+ 
+ 
+ 
+Install
+https://learn.hashicorp.com/terraform/getting-started/install.html
+ 
+Change system var:
+	Open control panel. Select System. Select Advanced system settings
+	On the Advanced tab select environment variables
+	In the systems variables pane, click path and then click edit
+	 
+Set environment vars for AWS authentication
+set AWS_ACCESS_KEY_ID= AKIA33A5FFXS3RJSTFNQ
+set AWS_SECRET_ACCESS_KEY= 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-
+ 
+ 
+Commands:
+	· Terraform plan: Shows what changes would happen if ran
+ 
+ 
+ 
+ 
+Deploy a single server
+	 
+	1. Create file named “main.tf” with data below:
+		provider "aws" {
+		    region = "us-east-2"
+		    access_key = "AKIA33A5FFXS3RJSTFNQ"
+		    secret_key = "92szqLC48Bl5q6SwngTwo0oybSzW1FJF3KFrYAFV"
+		}
+		 
+		resource "aws_instance" "example" {
+		  ami           = "ami-0c55b159cbfafe1f0"
+		  instance_type = "t2.micro"
+									}
+ 
+	2. From CLI move to where “main.tf” file is stored and run terraform init
+	3. Run terrform apply. Type yes when prompted
+	4. Modify existing main.tf file and add the following:
+		provider "aws" {
+		    region = "us-east-2"
+		    access_key = "AKIA33A5FFXS3RJSTFNQ"
+		    secret_key = "92szqLC48Bl5q6SwngTwo0oybSzW1FJF3KFrYAFV"
+		}
+		 
+		resource "aws_instance" "example" {
+		  ami           = "ami-0c55b159cbfafe1f0"
+		  instance_type = "t2.micro"
+		 
+		  tags = {
+		      Name = "terraform-example"
+		  }
+				}
+	5. Run terraform apply once more 
+ 
+ 
+Deply a single web server
+1. File name
+		resource "aws_instance" "example" {
+		  ami            = "ami-0c55b159cbfafe1f0"
+		  instance_type = "t2.micro"
+		 
+		  user_data = <<-EOF
+		                #!/bin/bash
+		                echo "Hello, world" > index.html
+		                nohup busybox httpd -f -p 8080 &
+		                EOF
+		  tags = {
+		      Name = "terraform-example"
+		  }
+		}
+2. Set security group
+		provider "aws" {
+		    region = "us-east-2"
+		    access_key = "AKIA33A5FFXS3RJSTFNQ"
+		    secret_key = "92szqLC48Bl5q6SwngTwo0oybSzW1FJF3KFrYAFV"
+		}
+		 
+		resource "aws_instance" "example" {
+		  ami            = "ami-0c55b159cbfafe1f0"
+		  instance_type = "t2.micro"
+		  vpc_security_group_ids = [aws_security_group.instance.id]
+		 
+		  user_data = <<-EOF
+		                #!/bin/bash
+		                echo "Hello, world" > index.html
+		                nohup busybox httpd -f -p 8080 &
+		                EOF
+		  tags = {
+		      Name = "terraform-example"
+		  }
+		}
+		resource "aws_security_group" "instance" { 
+		  name = "terraform-example-instance" 
+		 
+		  ingress { 
+		    from_port   = 8080 
+		    to_port     = 8080 
+		    protocol    = "tcp" 
+		    cidr_blocks = ["0.0.0.0/0"] 
+		   } 
+					}
+					 
+Deploy a Configurable Web Server
+ 
+	Creating a variable:
+		variable "server_port" {
+		  description = "The port the server will use for HTTP requests"
+		  type = number
+		}
+	 
+	If you run the above you will be prompted since there is no value assigned
+		$ terraform applyvar.server_port
+		
+		  The port the server will use for HTTP requests  
+		 
+		Enter a value:
+		 
+		 
+	You can assign the variable when you run the terraform apply
+		Terraform apply –var “server_port=8080”
+		 
+	You could also set the variable via an environment variable named TF_VAR_<name>:
+		Export TF_VAR_server_port=8080
+		Terraform apply
+		 
+	Or you can specify a default value:
+		variable "server_port" {
+		  description = "The port the server will use for HTTP requests"
+		  type = number
+		  default = 8080
+		}
+				 
+	To use the variable, do the following (from_port | to_port)
+		resource "aws_security_group" "instance" {
+		  name = "terraform-example-instance"  
+		  ingress {
+		    from_port   = var.server_port
+		    to_port     = var.server_port
+		    protocol    = "tcp"
+		    cidr_blocks = ["0.0.0.0/0"]
+		  }
+		}
+		 
+	You can put any valid reference within curly braces and terraform will convert it to a string. For example, the below shows how you can use var.server_port inside of the User Data string:
+		user_data = <<-EOF
+		      #!/bin/bash
+		      echo "Hello, World" > index.html
+		      nohup busybox httpd -f -p "${var.server_port}" &
+		      EOF
+	 
+	The below shows how to use output variables. Instead of manually poking around the EC2 console to find the IP address of your server, you can provide the IP as an output variable:
+	 
+		output "public_ip" {
+		  value = aws_instance.example.public_ip
+		  description = "The public IP of the web server"
+		}
+		 
+		Will produce the following:
+		 
+		$ terraform apply
+		(...)
+		 
+		aws_security_group.instance: Refreshing state... 
+		aws_instance.example: Refreshing state...
+		 
+		Apply complete! Resources: 0 added, 0 changed, 0 destroyed.
+		 
+		Outputs:
+		 
+		public_ip = 54.174.13.5
+		 
+	Instead of running terraform apply you can run terraform output to just give you the output variables
+		 
+		$ terraform output
+		public_ip = 54.174.13.5
+		 
+	You can also run terraform output public_ip to get specific output variables
+	 
+		$ terraform output public_ip
+		54.174.13.5
+		 
+		 
+	This is particularly handy for scripting. For example, you could create a deployment script that runs terraform apply to deploy the web server, uses terraform output public_ip to grab its public IP, and runs curl on the IP as a quick smoke test to validate that the deployment worked.
+		 
+		 
+ 
+Deploy a cluster of web servers
+	Auto Scaling Groups (ASG) can automatically launch a cluster of EC2 instances, monitor their health, automatically restart failed nodes, and adjust the size of the cluster in response to demand
+	 
+	The first step in creating an ASG is to create a launch configuration, which specifies how to configure each EC2 instance in the ASG. 
+ 
+		resource "aws_launch_configuration" "example" {
+		  image_id        = "ami-0c55b159cbfafe1f0"
+		  instance_type   = "t2.micro"
+		  security_groups = [aws_security_group.instance.id]
+		  user_data = <<-EOF
+		              #!/bin/bash
+		              echo "Hello, World" > index.html
+		              nohup busybox httpd -f -p "${var.server_port}" &
+		              EOF
+		  lifecycle {
+		    create_before_destroy = true
+		  }
+		}
+ 
+	The only new thing above is the lifecycle setting. The create_before_destroy setting controls the order which resources are recreated. The default order is to delete the old resource and then create a new one. Setting create_before_destroy to true reverses this order, creating the replacement first, and then deleting the old one. 
+	 
+	Next you can create the ASG itself using the aws_autoscaling_group_resource:
+	 
+		resource "aws_autoscaling_group" "example" {
+		  launch_configuration = aws_launch_configuration.example.id
+		  min_size = 2
+		  max_size = 10
+		  tag {
+		    key                 = "Name"
+		    value               = "terraform-asg-example"
+		    propagate_at_launch = true
+		  }
+		}
+		 
+	This ASG will run between 2 and 10 EC2 instances (defaulting to 2 for initial launch), each tagged with the name “terraform-asg-example". 
+	 
+	To make this ASG work, you need to specify 1 more parameter: availability_zones. You could hard-code them yourself but it isnt maintainable or portable (each AWS account has access to a slightly different set of AZs) so a better option is to use data sources to get the list of subnets in your AWS account. 
+	 
+	A data source represents a piece of read-only info that is fetched from the provider (aws) everytime you run terraform. Adding a data source to your terraform configurations does not create anything new; it just queries the provider’s API for data and to make that data avaiable to the rest of your terraform code. AWS provides the following data sources (and much more):
+		-VPC data
+		-Subnet data
+		-AMI IDs
+		-IP Address ranges
+		-Current user’s identity
+		 
+	The syntax is as follows:
+		data "<PROVIDER>_<TYPE>" "<NAME>" {
+		  [CONFIG ...]
+		}
+		 
+	Provider is the name of the provider (AWS). Type is the type of data source you want to use (vpc,zone,etc). Name is an identifier you can use throughout the terraform code to refer to this data source. Config consists of one or more arguments that are specific to that data source.
+	 
+	For example, below is how you can use the aws_availability_zones data source to fetch the list of AZs in your AWS account:
+	 
+		data “aws_availability_zones” “all” {}
+		 
+		 
+Deploy a load balancer
+ 
+	AWS offers 3 types of load balancers:
+		1) Application Load Balancer (ALB): best suited for HTTP/HTTPS traffic
+		2) Network Load Balancer (NLB): best suited for TCP/UDP traffic
+		3) Classic Load Balancer (CLB): Legacy
+		 
+	 
+	 
+Final 
+ 
+		provider "aws" {
+		    region = "us-east-2"
+		    access_key = "AKIA33A5FFXS3RJSTFNQ"
+		    secret_key = "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"
+		}
+		 
+		 
+		variable "server_port" {
+		  description = "The port the server will use for HTTP requests"
+		  type        = number
+		  default     = 8080
+		}
+		 
+		data "aws_availability_zones" "all" {}
+		 
+		resource "aws_launch_configuration" "example" {
+		  image_id        = "ami-0c55b159cbfafe1f0"
+		  instance_type   = "t2.micro"
+		  security_groups = [aws_security_group.instance.id]
+		  user_data = <<-EOF
+		              #!/bin/bash
+		              echo "Hello, World" > index.html
+		              nohup busybox httpd -f -p "${var.server_port}" &
+		              EOF
+		  lifecycle {
+		    create_before_destroy = true
+		  }
+		}
+		 
+		resource "aws_security_group" "instance" {
+		  name = "terraform-example-instance"
+		  ingress {
+		    from_port   = var.server_port
+		    to_port     = var.server_port
+		    protocol    = "tcp"
+		    cidr_blocks = ["0.0.0.0/0"]
+		  }
+		}
+		 
+		 
+		#create autoscaling group
+		resource "aws_autoscaling_group" "example" {
+		  launch_configuration = aws_launch_configuration.example.id
+		  availability_zones   = data.aws_availability_zones.all.names
+		 
+		  min_size = 2
+		  max_size = 10
+		 
+		#tells it which load balancer resource to use
+		  load_balancers    = [aws_elb.example.name]
+		  health_check_type = "ELB"
+		 
+		  tag {
+		    key                 = "Name"
+		    value               = "terraform-asg-example"
+		    propagate_at_launch = true
+		  }
+		}
+		 
+		#creates load balancer
+		resource "aws_elb" "example" {
+		  name               = "terraform-asg-example"
+		  security_groups    = [aws_security_group.elb.id]
+		  availability_zones = data.aws_availability_zones.all.names
+		 
+		 #performs health check
+		  health_check {
+		    target              = "HTTP:${var.server_port}/"
+		    interval            = 30
+		    timeout             = 3
+		    healthy_threshold   = 2
+		    unhealthy_threshold = 2
+		  }
+		 
+		  # This adds a listener for incoming HTTP requests.
+		  listener {
+		    lb_port           = 80
+		    lb_protocol       = "http"
+		    instance_port     = var.server_port
+		    instance_protocol = "http"
+		  }
+		}
+		 
+		resource "aws_security_group" "elb" {
+		  name = "terraform-example-elb"
+		  # Allow all outbound
+		  egress {
+		    from_port   = 0
+		    to_port     = 0
+		    protocol    = "-1"
+		    cidr_blocks = ["0.0.0.0/0"]
+		  }
+		  # Inbound HTTP from anywhere
+		  ingress {
+		    from_port   = 80
+		    to_port     = 80
+		    protocol    = "tcp"
+		    cidr_blocks = ["0.0.0.0/0"]
+		  }
+		}
+		 
+		output "clb_dns_name" {
+		  value       = aws_elb.example.dns_name
+		  description = "The domain name of the load balancer"
+		  #prints output of dns name
+		}
+
+From <https://d.docs.live.net/eb6e5ee7f9fb606d/Work/DevOps/terraform/terraformNotes.docx> 
+
+
