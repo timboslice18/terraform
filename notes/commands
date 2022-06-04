@@ -1,0 +1,62 @@
+
+Terraform allows declaring a desired state for resources as code, and will determine and execute a plan to take the infrastructure from its current state, to the desired state.
+
+
+
+Installing Terraform
+
+	wget https..
+	unzip terraform_...
+	mv terraform /usr/local/bin
+	terraform version
+	
+	
+Uses Hasicopr Config Language HCL - Declarative Language and has a .tf extension
+	ex)
+	
+<block> <parameters> {
+	<key1> = <value1>
+	<key2> = <value2>
+}
+
+	
+resource "aws_instance" "webserver" {
+	ami = "ami-9234..."
+	instance_type = "t2.micro"
+}
+
+
+Run the "init" comand:
+	terraform init
+
+Run the "plan" command:
+	terraform plan
+
+Run the "apply" command:
+	terraform apply
+
+Test the code
+	terraform validate
+
+scans the directory and fformats it correctly
+	terraform fmt
+	
+shows local resource -json
+	terraform show
+	
+show providers
+	terraform providers
+	
+prints variables being used
+	terraform output
+	
+updates statefile DOES NOT MODIFY INFRA, but does modify state file
+	terraform refresh
+	
+creates visual map of dependencies
+	terraform graph
+	
+		#Run the graph thorugh a visualization tool called graphiz
+		apt install graphiz -y
+		terraform graph | dot -Tsvg > graph.svg
+	
