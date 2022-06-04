@@ -1,0 +1,9 @@
+terraform creates a terraform.tfstate file when terraform apply command is ran
+
+its a json structured file that shows the build info
+
+Allows terraform to create execution plans
+
+
+#in larger environments, if you add --refresh=false, it tells terraform to use the terraform.tfstate file instead of probing the environment
+terraform plan --refresh=false
