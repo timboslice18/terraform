@@ -1,0 +1,31 @@
+main.tf
+resource "local_file" "pet" {
+	filename = var.filename
+	content = "My favorite pet is ${random_pet.my-pet.id"
+}
+resource "random_pet" "my-pet" {
+	prefix = var.prefix
+	seperator = var.seperator
+	length = var.length
+}
+output pet-name {
+	value = random_put.my-pet.id
+	description = "Record the value of pet ID generated at the random_pet resource"
+}
+
+variables.tf
+variable "filename" {
+		default = "/root/pets.txt"
+}
+variable "content" {
+		default = "we love pets!"
+}
+variable "prefix" {
+		default = "Mrs"
+}
+variable "seperator" {
+		default = "."
+}
+variable "length" {
+		default = "1"
+}
