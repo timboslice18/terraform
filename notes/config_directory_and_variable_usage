@@ -1,0 +1,37 @@
+main.tf - main configuration file containing resource definitions
+variables.tf - contains variable declarations
+outputs.tf - contains outputs from resources
+provider.tf - contains provider definitions
+
+
+variables.tf
+variable "filename" {
+		default = "/root/pets.txt"
+		type = string
+		description = "the path of a local file"
+}
+variable "content" {
+		default = "we love pets!"
+}
+variable "prefix" {
+		default = "Mrs"
+}
+variable "seperator" {
+		default = "."
+}
+variable "length" {
+		default = "1"
+}
+
+
+main.tf
+resource "local_file" "pet" {
+	filename = var.filename
+	content = var.content
+}
+resource "random_pet" "my-pet" {
+	prefix = var.prefix
+	seperator = var.seperator
+	length = var.length
+}
+
